@@ -1,0 +1,545 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "This is the template for creating a BI solution to analyze Amazon Connect Agent Evaluation V1"
+Parameters:
+  AwsGlueDatabaseName:
+    Type: "String"
+    Default: "AmazonConnectDataAnalyticsDB"
+    Description: Enter a name without spaces to be used as the glue database name. If you have not changed this value that was provided in CDK deployment, below provided default name works.
+    MinLength: 3
+    AllowedPattern: "^[A-Za-z0-9]*$"
+
+Resources:
+  QuickSightDataSourceEvaluation:
+    Type: "AWS::QuickSight::DataSource"
+    Properties:
+      DataSourceId: !Sub "${AWS::StackName}-Evaluation"
+      Name: !Sub "${AWS::StackName}-Evaluation"
+      AwsAccountId: !Ref AWS::AccountId
+      Type: "ATHENA"
+      DataSourceParameters:
+        AthenaParameters:
+          WorkGroup: "primary"
+      SslProperties:
+        DisableSsl: false
+  
+  
+  QuickSightDataSetEvaluationCtrView:
+    Type: "AWS::QuickSight::DataSet"
+    Properties:
+      DataSetId: !Sub "${AWS::StackName}-Connect_Evaluation_Ctr_View"
+      Name: !Sub "${AWS::StackName}-Connect_Evaluation_Ctr_View"
+      AwsAccountId: !Ref AWS::AccountId
+      PhysicalTableMap:
+        5d20b3c5-51a3-4180-bba1-bf23378b7054:
+          RelationalTable:
+            DataSourceArn: !GetAtt QuickSightDataSourceEvaluation.Arn
+            Catalog: "AwsDataCatalog"
+            Schema: !Sub "${AwsGlueDatabaseName}"
+            Name: "final_connect_evaluation_ctr_view"
+            InputColumns:
+              - Name: "evaluationid"
+                Type: "STRING"
+              - Name: "contactid"
+                Type: "STRING"
+              - Name: "instanceid"
+                Type: "STRING"
+              - Name: "agentid"
+                Type: "STRING"
+              - Name: "evaluationdefinitiontitle"
+                Type: "STRING"
+              - Name: "evaluator"
+                Type: "STRING"
+              - Name: "evaluationsubmittimestamp"
+                Type: "STRING"
+              - Name: "evaluationformtotalscorepercentage"
+                Type: "DECIMAL"
+              - Name: "questionrefid"
+                Type: "STRING"
+              - Name: "sectionrefid"
+                Type: "STRING"
+              - Name: "sectiontitle"
+                Type: "STRING"
+              - Name: "parentsectionrefid"
+                Type: "STRING"
+              - Name: "questiontext"
+                Type: "STRING"
+              - Name: "questionanswervalue"
+                Type: "STRING"
+              - Name: "questionanswervaluerefid"
+                Type: "STRING"
+              - Name: "questionanswerscorepercentage"
+                Type: "DECIMAL"
+              - Name: "score_sectionrefid"
+                Type: "STRING"
+              - Name: "score_sectiontitle"
+                Type: "STRING"
+              - Name: "score_sectionscorepercentage"
+                Type: "DECIMAL"
+              - Name: "agent_username"
+                Type: "STRING"
+              - Name: "channel"
+                Type: "STRING"
+              - Name: "queue_name"
+                Type: "STRING"
+              - Name: "agent_routingprofile_name"
+                Type: "STRING"
+              - Name: "connectedtosystemtimestamp"
+                Type: "STRING"
+              - Name: "disconnecttimestamp"
+                Type: "STRING"
+              - Name: "initiationtimestamp"
+                Type: "STRING"
+      LogicalTableMap:
+        9521223d-333b-4506-9f75-88602641c597:
+          Alias: "final_connect_evaluation_ctr_view"
+          DataTransforms:
+            - CastColumnTypeOperation:
+                ColumnName: "evaluationsubmittimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+            - CastColumnTypeOperation:
+                ColumnName: "connectedtosystemtimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            - CastColumnTypeOperation:
+                ColumnName: "disconnecttimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            - CastColumnTypeOperation:
+                ColumnName: "initiationtimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z'"
+            - ProjectOperation:
+                ProjectedColumns:
+                  - "evaluationid"
+                  - "contactid"
+                  - "instanceid"
+                  - "agentid"
+                  - "evaluationdefinitiontitle"
+                  - "evaluator"
+                  - "evaluationsubmittimestamp"
+                  - "evaluationformtotalscorepercentage"
+                  - "questionrefid"
+                  - "sectionrefid"
+                  - "sectiontitle"
+                  - "parentsectionrefid"
+                  - "questiontext"
+                  - "questionanswervalue"
+                  - "questionanswervaluerefid"
+                  - "questionanswerscorepercentage"
+                  - "score_sectionrefid"
+                  - "score_sectiontitle"
+                  - "score_sectionscorepercentage"
+                  - "agent_username"
+                  - "channel"
+                  - "queue_name"
+                  - "agent_routingprofile_name"
+                  - "connectedtosystemtimestamp"
+                  - "disconnecttimestamp"
+                  - "initiationtimestamp"
+          Source:
+            PhysicalTableId: "5d20b3c5-51a3-4180-bba1-bf23378b7054"
+      ImportMode: "DIRECT_QUERY"
+      FieldFolders: { }
+  
+  QuickSightDataSetEvaluationAllView:
+    Type: "AWS::QuickSight::DataSet"
+    Properties:
+      DataSetId: !Sub "${AWS::StackName}-Connect_Evaluation_All_View"
+      Name: !Sub "${AWS::StackName}-Connect_Evaluation_All_View"
+      AwsAccountId: !Ref AWS::AccountId
+      PhysicalTableMap:
+        c949ad6c-3ab6-48ef-9001-3b2f8e38b138:
+          RelationalTable:
+            DataSourceArn: !GetAtt QuickSightDataSourceEvaluation.Arn
+            Catalog: "AwsDataCatalog"
+            Schema: !Sub "${AwsGlueDatabaseName}"
+            Name: "connect_ef_evaluationsall_view"
+            InputColumns:
+              - Name: "evaluationid"
+                Type: "STRING"
+              - Name: "contactid"
+                Type: "STRING"
+              - Name: "instanceid"
+                Type: "STRING"
+              - Name: "agentid"
+                Type: "STRING"
+              - Name: "evaluationdefinitiontitle"
+                Type: "STRING"
+              - Name: "evaluator"
+                Type: "STRING"
+              - Name: "evaluationstarttimestamp"
+                Type: "STRING"
+              - Name: "evaluationsubmittimestamp"
+                Type: "STRING"
+              - Name: "evaluationformtotalscorepercentage"
+                Type: "DECIMAL"
+              - Name: "questionrefid"
+                Type: "STRING"
+              - Name: "sectionrefid"
+                Type: "STRING"
+              - Name: "sectiontitle"
+                Type: "STRING"
+              - Name: "parentsectionrefid"
+                Type: "STRING"
+              - Name: "questiontext"
+                Type: "STRING"
+              - Name: "questionanswervalue"
+                Type: "STRING"
+              - Name: "questionanswervaluerefid"
+                Type: "STRING"
+              - Name: "questionanswerscorepercentage"
+                Type: "DECIMAL"
+      LogicalTableMap:
+        4dd14f14-0bfd-4c2c-84fa-94171d96e35b:
+          Alias: "connect_ef_evaluationsall_view"
+          DataTransforms:
+            - CastColumnTypeOperation:
+                ColumnName: "evaluationstarttimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+            - CastColumnTypeOperation:
+                ColumnName: "evaluationsubmittimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"
+            - ProjectOperation:
+                ProjectedColumns:
+                  - "evaluationid"
+                  - "contactid"
+                  - "instanceid"
+                  - "agentid"
+                  - "evaluationdefinitiontitle"
+                  - "evaluator"
+                  - "evaluationstarttimestamp"
+                  - "evaluationsubmittimestamp"
+                  - "evaluationformtotalscorepercentage"
+                  - "questionrefid"
+                  - "sectionrefid"
+                  - "sectiontitle"
+                  - "parentsectionrefid"
+                  - "questiontext"
+                  - "questionanswervalue"
+                  - "questionanswervaluerefid"
+                  - "questionanswerscorepercentage"
+          Source:
+            PhysicalTableId: "c949ad6c-3ab6-48ef-9001-3b2f8e38b138"
+      ImportMode: "DIRECT_QUERY"
+      FieldFolders: { }
+  
+  
+  QuickSightDataSetEvaluationCtrDenormalized:
+    Type: "AWS::QuickSight::DataSet"
+    Properties:
+      DataSetId: !Sub "${AWS::StackName}-Connect_Evaluation_Ctr_Denormalized"
+      Name: !Sub "${AWS::StackName}-Connect_Evaluation_Ctr_Denormalized"
+      AwsAccountId: !Ref AWS::AccountId
+      PhysicalTableMap:
+        e9424dee-a2cc-460f-a6d6-9c075cbdfb13:
+          RelationalTable:
+            DataSourceArn: !GetAtt QuickSightDataSourceEvaluation.Arn
+            Catalog: "AwsDataCatalog"
+            Schema: !Sub "${AwsGlueDatabaseName}"
+            Name: "connect_ctr_denormalized"
+            InputColumns:
+              - Name: "awsaccountid"
+                Type: "STRING"
+              - Name: "awscontacttracerecordformatversion"
+                Type: "STRING"
+              - Name: "agent_arn"
+                Type: "STRING"
+              - Name: "agent_aftercontactworkduration"
+                Type: "INTEGER"
+              - Name: "agent_aftercontactworkendtimestamp"
+                Type: "STRING"
+              - Name: "agent_aftercontactworkstarttimestamp"
+                Type: "STRING"
+              - Name: "agent_agentinteractionduration"
+                Type: "INTEGER"
+              - Name: "agent_connectedtoagenttimestamp"
+                Type: "STRING"
+              - Name: "agent_customerholdduration"
+                Type: "INTEGER"
+              - Name: "agent_hierarchygroups"
+                Type: "STRING"
+              - Name: "agent_longestholdduration"
+                Type: "INTEGER"
+              - Name: "agent_numberofholds"
+                Type: "INTEGER"
+              - Name: "agent_routingprofile_name"
+                Type: "STRING"
+              - Name: "agent_username"
+                Type: "STRING"
+              - Name: "agentconnectionattempts"
+                Type: "INTEGER"
+              - Name: "campaign_id"
+                Type: "STRING"
+              - Name: "channel"
+                Type: "STRING"
+              - Name: "connectedtosystemtimestamp"
+                Type: "STRING"
+              - Name: "contactid"
+                Type: "STRING"
+              - Name: "customerendpoint_address"
+                Type: "STRING"
+              - Name: "customerendpoint_type"
+                Type: "STRING"
+              - Name: "disconnectreason"
+                Type: "STRING"
+              - Name: "disconnecttimestamp"
+                Type: "STRING"
+              - Name: "initialcontactid"
+                Type: "STRING"
+              - Name: "initiationmethod"
+                Type: "STRING"
+              - Name: "initiationtimestamp"
+                Type: "STRING"
+              - Name: "instancearn"
+                Type: "STRING"
+              - Name: "lastupdatetimestamp"
+                Type: "STRING"
+              - Name: "nextcontactid"
+                Type: "STRING"
+              - Name: "previouscontactid"
+                Type: "STRING"
+              - Name: "scheduledtimestamp"
+                Type: "STRING"
+              - Name: "systemendpoint_address"
+                Type: "STRING"
+              - Name: "systemendpoint_type"
+                Type: "STRING"
+              - Name: "transfercompletedtimestamp"
+                Type: "STRING"
+              - Name: "transferredtoendpoint_address"
+                Type: "STRING"
+              - Name: "transferredtoendpoint_type"
+                Type: "STRING"
+              - Name: "queue_arn"
+                Type: "STRING"
+              - Name: "queue_name"
+                Type: "STRING"
+              - Name: "queue_enqueuetimestamp"
+                Type: "STRING"
+              - Name: "queue_dequeuetimestamp"
+                Type: "STRING"
+              - Name: "queue_duration"
+                Type: "INTEGER"
+              - Name: "recording_type"
+                Type: "STRING"
+              - Name: "recording_status"
+                Type: "STRING"
+              - Name: "recording_location"
+                Type: "STRING"
+              - Name: "recording_deletionreason"
+                Type: "STRING"
+              - Name: "year"
+                Type: "INTEGER"
+              - Name: "month"
+                Type: "INTEGER"
+              - Name: "day"
+                Type: "INTEGER"
+      LogicalTableMap:
+        a073be23-7e92-410f-885a-5c6479747217:
+          Alias: "connect_ctr_denormalized"
+          DataTransforms:
+            - CastColumnTypeOperation:
+                ColumnName: "agent_aftercontactworkendtimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "agent_aftercontactworkstarttimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "agent_connectedtoagenttimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "connectedtosystemtimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "disconnecttimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "initiationtimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "lastupdatetimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "scheduledtimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "queue_enqueuetimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+            - CastColumnTypeOperation:
+                ColumnName: "queue_dequeuetimestamp"
+                NewColumnType: "DATETIME"
+                Format: "yyyy-MM-dd'T'HH:mm:ss'Z"
+          Source:
+            PhysicalTableId: "e9424dee-a2cc-460f-a6d6-9c075cbdfb13"
+        aac11073-3d66-4378-a272-2e301aaece7c:
+          Alias: "connect_ef_evaluationsall_view"
+          DataTransforms:
+            - RenameColumnOperation:
+                ColumnName: "contactid"
+                NewColumnName: "contactid[connect_ef_evaluationsall_view]"
+          Source:
+            DataSetArn: !GetAtt QuickSightDataSetEvaluationAllView.Arn
+        e3c2565a-0815-4b88-8c04-ccfd102459f8:
+          Alias: "Intermediate Table"
+          DataTransforms:
+            - ProjectOperation:
+                ProjectedColumns:
+                  - "awsaccountid"
+                  - "awscontacttracerecordformatversion"
+                  - "agent_arn"
+                  - "agent_aftercontactworkduration"
+                  - "agent_aftercontactworkendtimestamp"
+                  - "agent_aftercontactworkstarttimestamp"
+                  - "agent_agentinteractionduration"
+                  - "agent_connectedtoagenttimestamp"
+                  - "agent_customerholdduration"
+                  - "agent_hierarchygroups"
+                  - "agent_longestholdduration"
+                  - "agent_numberofholds"
+                  - "agent_routingprofile_name"
+                  - "agent_username"
+                  - "agentconnectionattempts"
+                  - "campaign_id"
+                  - "channel"
+                  - "connectedtosystemtimestamp"
+                  - "contactid"
+                  - "customerendpoint_address"
+                  - "customerendpoint_type"
+                  - "disconnectreason"
+                  - "disconnecttimestamp"
+                  - "initialcontactid"
+                  - "initiationmethod"
+                  - "initiationtimestamp"
+                  - "instancearn"
+                  - "lastupdatetimestamp"
+                  - "nextcontactid"
+                  - "previouscontactid"
+                  - "scheduledtimestamp"
+                  - "systemendpoint_address"
+                  - "systemendpoint_type"
+                  - "transfercompletedtimestamp"
+                  - "transferredtoendpoint_address"
+                  - "transferredtoendpoint_type"
+                  - "queue_arn"
+                  - "queue_name"
+                  - "queue_enqueuetimestamp"
+                  - "queue_dequeuetimestamp"
+                  - "queue_duration"
+                  - "recording_type"
+                  - "recording_status"
+                  - "recording_location"
+                  - "recording_deletionreason"
+                  - "year"
+                  - "month"
+                  - "day"
+                  - "evaluationid"
+                  - "contactid[connect_ef_evaluationsall_view]"
+                  - "instanceid"
+                  - "agentid"
+                  - "evaluationdefinitiontitle"
+                  - "evaluator"
+                  - "evaluationstarttimestamp"
+                  - "evaluationsubmittimestamp"
+                  - "evaluationformtotalscorepercentage"
+                  - "questionrefid"
+                  - "sectionrefid"
+                  - "sectiontitle"
+                  - "parentsectionrefid"
+                  - "questiontext"
+                  - "questionanswervalue"
+                  - "questionanswervaluerefid"
+                  - "questionanswerscorepercentage"
+          Source:
+            JoinInstruction:
+              LeftOperand: "a073be23-7e92-410f-885a-5c6479747217"
+              RightOperand: "aac11073-3d66-4378-a272-2e301aaece7c"
+              Type: "RIGHT"
+              OnClause: "contactid = {contactid[connect_ef_evaluationsall_view]}"
+      ImportMode: "DIRECT_QUERY"
+      FieldFolders: { }
+  
+  
+  QuickSightAnalysisEvaluation:
+    Type: AWS::QuickSight::Analysis
+    Properties:
+      AnalysisId: !Sub "${AWS::StackName}-EvaluationFormAnalytics_v1"
+      Name: !Sub "${AWS::StackName}-EvaluationFormAnalytics_v1"
+      AwsAccountId: !Ref AWS::AccountId
+      SourceEntity:
+        SourceTemplate:
+          DataSetReferences:
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationCtrDenormalized.Arn
+              DataSetPlaceholder: "EvaluationCtrDenormalized"
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationAllView.Arn
+              DataSetPlaceholder: "EvaluationAllView"
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationCtrView.Arn
+              DataSetPlaceholder: "EvaluationCtrView"
+          Arn: "arn:aws:quicksight:us-west-2:950452693423:template/sharedtemplates-EvaluationFormAnalytics_v1"
+  
+  
+  
+  QuickSightTemplateEvaluation:
+    Type: "AWS::QuickSight::Template"
+    Properties:
+      TemplateId: !Sub "${AWS::StackName}-Evaluation"
+      Name: !Sub "${AWS::StackName}-Evaluation"
+      AwsAccountId: !Ref AWS::AccountId
+      VersionDescription: "1"
+      SourceEntity:
+        SourceAnalysis:
+          DataSetReferences:
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationCtrDenormalized.Arn
+              DataSetPlaceholder: "EvaluationCtrDenormalized"
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationAllView.Arn
+              DataSetPlaceholder: "EvaluationAllView"
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationCtrView.Arn
+              DataSetPlaceholder: "EvaluationCtrView"
+          Arn: !GetAtt QuickSightAnalysisEvaluation.Arn
+  
+  
+  QuickSightDashboardEvaluation:
+    Type: "AWS::QuickSight::Dashboard"
+    Properties:
+      DashboardId: !Sub "${AWS::StackName}-EvaluationFormAnalytics_v1"
+      Name: !Sub "${AWS::StackName}-EvaluationFormAnalytics_v1"
+      AwsAccountId: !Ref AWS::AccountId
+      VersionDescription: "1"
+      DashboardPublishOptions:
+        AdHocFilteringOption:
+          AvailabilityStatus: "DISABLED"
+        ExportToCSVOption:
+          AvailabilityStatus: "ENABLED"
+        SheetControlsOption:
+          VisibilityState: "EXPANDED"
+      SourceEntity:
+        SourceTemplate:
+          DataSetReferences:
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationCtrDenormalized.Arn
+              DataSetPlaceholder: "EvaluationCtrDenormalized"
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationAllView.Arn
+              DataSetPlaceholder: "EvaluationAllView"
+            - DataSetArn: !GetAtt QuickSightDataSetEvaluationCtrView.Arn
+              DataSetPlaceholder: "EvaluationCtrView"
+          Arn: !GetAtt QuickSightTemplateEvaluation.Arn
+
+
+
+Outputs:
+  ManageAssets:
+    Description: Click to proceed to 'Manage Assets' page of amazon Quicksight. Share the newly created dashboard named "<StackName>-EvaluationFormAnalytics_v1. Share with your own username to see it part of your dashboards as well.
+    Value: !Sub 'https://${AWS::Region}.quicksight.aws.amazon.com/sn/console/asset-management#'
+  EvaluationDashboard:
+    Description: Click to see the deployed dashboard. Please do not forget to share the dashboard
+    Value: !Sub 'https://${AWS::Region}.quicksight.aws.amazon.com/sn/dashboards/${AWS::StackName}-EvaluationFormAnalytics_v1'

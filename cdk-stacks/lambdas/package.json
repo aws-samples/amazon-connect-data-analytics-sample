@@ -1,0 +1,17 @@
+{
+  "name": "amazon-connect-data-analytics-sample-lambdas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@aws-sdk/client-athena": "^3.297.0",
+    "@aws-sdk/client-firehose": "^3.297.0",
+    "@aws-sdk/client-kinesis": "^3.297.0",
+    "@aws-sdk/client-s3": "^3.297.0",
+    "@aws-sdk/client-sqs": "^3.298.0",
+    "eslint": "^8.13.0"
+  }
+}

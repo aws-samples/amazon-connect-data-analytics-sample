@@ -1,0 +1,129 @@
+{
+  "CdkAppName": "AmazonConnectDataAnalyticsSample",
+  "CdkBackendStack": "AmazonConnectDataAnalyticsSampleBackend",
+  "hierarchy": "/AmazonConnectDataAnalyticsSample/",
+  "parameters": [
+    {
+      "name": "awsGlueDatabaseName",
+      "cliFormat": "aws-glue-database-name",
+      "description": "AWS Glue Database to hold tables for Amazon Connect Data Analytics",
+      "defaultValue": "AmazonConnectDataAnalyticsDB",
+      "required": true
+    },
+    {
+      "name": "ctrStackEnabled",
+      "cliFormat": "ctr-stack-enabled",
+      "description": "Set to true to deploy Contact Trace Records (CTR) Stack",
+      "defaultValue": false,
+      "required": true,
+      "boolean": true
+    },
+    {
+      "name": "ctrPartitioningScheduleEnabled",
+      "cliFormat": "ctr-partitioning-schedule-enabled",
+      "description": "Set to true if you want to schedule CTR Partitioning Job in EventBridge",
+      "defaultValue": true,
+      "required": true,
+      "boolean": true,
+      "parent": "ctrStackEnabled"
+    },
+    {
+      "name": "aeStackEnabled",
+      "cliFormat": "ae-stack-enabled",
+      "description": "Set to true to deploy Agent Events (AE) Stack",
+      "defaultValue": false,
+      "required": true,
+      "boolean": true
+    },
+    {
+      "name": "aePartitioningScheduleEnabled",
+      "cliFormat": "ae-partitioning-schedule-enabled",
+      "description": "Set to true if you want to schedule AE Partitioning Job in EventBridge",
+      "defaultValue": true,
+      "required": true,
+      "boolean": true,
+      "parent": "aeStackEnabled"
+    },
+    {
+      "name": "cflStackEnabled",
+      "cliFormat": "cfl-stack-enabled",
+      "description": "Set to true to deploy Contact Flow Logs (CFL) Stack",
+      "defaultValue": false,
+      "required": true,
+      "boolean": true
+    },
+    {
+      "name": "cflPartitioningScheduleEnabled",
+      "cliFormat": "cfl-partitioning-schedule-enabled",
+      "description": "Set to true if you want to schedule CFL Partitioning Job in EventBridge",
+      "defaultValue": true,
+      "required": true,
+      "boolean": true,
+      "parent": "cflStackEnabled"
+    },
+    {
+      "name": "connectContactFlowLogsCloudWatchLogGroup",
+      "cliFormat": "connect-contact-flow-logs-cloudwatch-log-group",
+      "description": "Set Amazon CloudWatch log group where Amazon Connect Contact Flow Logs are stored (i.e. /aws/connect/your-instance-alias)",
+      "required": true,
+      "parent": "cflStackEnabled"
+    },
+    {
+      "name": "clStackEnabled",
+      "cliFormat": "cl-stack-enabled",
+      "description": "Set to true to deploy Contact Lens (CL) Stack",
+      "defaultValue": false,
+      "required": true,
+      "boolean": true
+    },
+    {
+      "name": "connectContactLensS3BucketName",
+      "cliFormat": "connect-contact-lens-s3-bucket-name",
+      "description": "The S3 bucket where Amazon Connect stores Contact Lens output files (and Amazon Connect Call Recordings)",
+      "required": true,
+      "parent": "clStackEnabled"
+    },
+    {
+      "name": "clPartitioningScheduleEnabled",
+      "cliFormat": "cl-partitioning-schedule-enabled",
+      "description": "Set to true if you want to schedule CL Partitioning Job in EventBridge",
+      "defaultValue": true,
+      "required": true,
+      "boolean": true,
+      "parent": "clStackEnabled"
+    },
+    {
+      "name": "efStackEnabled",
+      "cliFormat": "ef-stack-enabled",
+      "description": "Set to true to deploy Evaluation Forms (EF) Stack",
+      "defaultValue": false,
+      "required": true,
+      "boolean": true
+    },
+    {
+      "name": "connectEvaluationFormsS3Location",
+      "cliFormat": "connect-evaluation-forms-s3-location",
+      "description": "The S3 bucket/prefix where Amazon Connect stores Evaluation Forms output files (i.e. your-bucket-name/connect/your-instance-alias/ContactEvaluations)",
+      "required": true,
+      "parent": "efStackEnabled"
+    },
+    {
+      "name": "efPartitioningScheduleEnabled",
+      "cliFormat": "ef-partitioning-schedule-enabled",
+      "description": "Set to true if you want to schedule EF Partitioning Job in EventBridge",
+      "defaultValue": true,
+      "required": true,
+      "boolean": true,
+      "parent": "efStackEnabled"
+    },
+    {
+      "name": "efReportingStackEnabled",
+      "cliFormat": "ef-reporting-stack-enabled",
+      "description": "Set to true if you want to deploy resources for the Analyze Amazon Connect Evaluation Form blog",
+      "defaultValue": false,
+      "required": true,
+      "boolean": true,
+      "parent": "efStackEnabled"
+    }
+  ]
+}
