@@ -16,7 +16,8 @@
     "install:all": "npm run install:cdk-stacks && npm run install:lambdas",
     "cdk:remove:context": "rm -f cdk.context.json",
     "cdk:synth": "npm run cdk:remove:context && cdk synth",
-    "cdk:deploy": "npm run cdk:remove:context && cdk deploy --all --no-rollback"
+    "cdk:deploy": "npm run cdk:remove:context && cdk deploy --all --no-rollback",
+    "cdk:deploy:gitbash": "npm run cdk:remove:context && winpty cdk.cmd deploy --all --disable-rollback"
   },
   "devDependencies": {
     "@types/jest": "^26.0.10",
