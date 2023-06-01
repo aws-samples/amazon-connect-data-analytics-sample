@@ -602,7 +602,9 @@ To remove the solution from your account, please follow these steps:
 
 This sections provides examples on how to create custom metrics and KPIs, by using SQL queries, and visualize the date
 in Amazon QuickSight dashboards. As explained in previous sections, Amazon Athena provides the ability to easily write
-SQL queries, no top of raw JSON data, that is stored in Amazon S3 (buckets). In this section, we are going to follow an
+SQL queries, no top of raw JSON data, that is stored in Amazon S3 (buckets).
+
+In this section, we are going to follow an
 example use-case, and create SQL queries based on the use-case requirements. Finally, we are going to visualize the data
 by leveraging Amazon QuickSight dashboards.
 
@@ -649,7 +651,7 @@ In this section of the guide, we are going to build our Contact Flow, step by st
 pre-build Contact Flow, please download it from here [SampleInboundFlow](/contact-flows/SimpleInboundFlow).
 
 1. Login into your Amazon Connect instance
-1. Navigate to Routing > Contact Flows > Create Contact Flow
+1. Navigate to Routing > Flows > Create Flow
 1. Enter contact flow name: `SimpleInboundFlow`
 1. Enter a description
 1. From **Set** section, drag and drop **Set Logging Behavior** and **Enable** it (all contact flow logs will be
@@ -700,57 +702,46 @@ This completes SimpleInboundFlow, which sets `CallReason` based on main menu sel
 
 ### Customer journey trace
 
-As a first step, let’s write a query that would provide us a complete trace of customer journey, through a Contact Flow.
-We are going to start by analyzing Contact Flow Logs, for a particular call. Please open you Amazon Athena console and
-write the following query:
+As a first step, let’s write a query that would provide us a complete trace of customer journey, through a Contact Flow. We are going to start by analyzing Contact Flow Logs, for a particular call. The `message` is defined in the Glue table as type of `string` and the properties are dynamic. Therefore, we will use the `json_extract` method to extract the value as per the official [documentation](https://docs.aws.amazon.com/athena/latest/ug/extracting-data-from-JSON.html). Please open your Amazon Athena console and write the following query:
 
 ```sql
-select message.contactid,
-			 message.timestamp,
-			 message.contactflowmoduletype,
-			 message.parameters.loggingbehavior,
-			 message.parameters.text,
-			 message.results,
-			 message.parameters.key,
-			 message.parameters.value,
-			 message.parameters.queue,
-			 message.parameters.audioprompt
-
-from amazonconnectdataanalyticsdb.connect_cfl
-where
-	year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-order by 1, 2
+SELECT CAST(json_extract(message, '$.contactid') AS VARCHAR) AS contactid,
+  CAST(json_extract(message, '$.timestamp') AS VARCHAR) AS timestamp,
+  CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) AS contactflowmoduletype,
+  CAST(json_extract(message, '$.parameters.loggingbehavior') AS VARCHAR) AS loggingbehavior,
+  CAST(json_extract(message, '$.parameters.text') AS VARCHAR) AS text,
+  CAST(json_extract(message, '$.results') AS VARCHAR) AS results,
+  CAST(json_extract(message, '$.parameters.key') AS VARCHAR) AS KEY,
+  CAST(json_extract(message, '$.parameters.value') AS VARCHAR) AS value,
+  CAST(json_extract(message, '$.parameters.queue') AS VARCHAR) AS queue,
+  CAST(json_extract(message, '$.parameters.audioprompt') AS VARCHAR) AS audioprompt
+FROM "amazonconnectdataanalyticsdb"."connect_cfl"
+WHERE YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1, 2
 ```
 
 This query lists all visited nodes, for each call, for today. To filter by a single contact, copy one contactId from the
 results and run the following query:
 
 ```sql
-select message.contactid,
-			 message.timestamp,
-			 message.contactflowmoduletype,
-			 message.parameters.loggingbehavior,
-			 message.parameters.text,
-			 message.results,
-			 message.parameters.key,
-			 message.parameters.value,
-			 message.parameters.queue,
-			 message.parameters.audioprompt
-
-from amazonconnectdataanalyticsdb.connect_cfl
-where message.contactid = '5078c1b5-2057-4941-8ec9-6199b8a6c2a9'
-				and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-				and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-				and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER)
-order by 1, 2
+SELECT CAST(json_extract(message, '$.contactid') AS VARCHAR) AS contactid,
+  CAST(json_extract(message, '$.timestamp') AS VARCHAR) AS timestamp,
+  CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) AS contactflowmoduletype,
+  CAST(json_extract(message, '$.parameters.loggingbehavior') AS VARCHAR) AS loggingbehavior,
+  CAST(json_extract(message, '$.parameters.text') AS VARCHAR) AS text,
+  CAST(json_extract(message, '$.results') AS VARCHAR) AS results,
+  CAST(json_extract(message, '$.parameters.key') AS VARCHAR) AS KEY,
+  CAST(json_extract(message, '$.parameters.value') AS VARCHAR) AS value,
+  CAST(json_extract(message, '$.parameters.queue') AS VARCHAR) AS queue,
+  CAST(json_extract(message, '$.parameters.audioprompt') AS VARCHAR) AS audioprompt
+FROM "amazonconnectdataanalyticsdb"."connect_cfl"
+WHERE CAST(json_extract(message, '$.contactid') AS VARCHAR) = '5078c1b5-2057-4941-8ec9-6199b8a6c2a9'
+  AND YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1, 2
 ```
 
 An example of the result set:  
@@ -763,36 +754,34 @@ Queue ARN etc.
 To get only the DTMF input for a particular `contactid`, execute the following query:
 
 ```sql
-select message.contactid,
-			 message.timestamp,
-			 message.contactflowmoduletype,
-			 message.results
-
-from amazonconnectdataanalyticsdb.connect_cfl
-where message.contactid = '5078c1b5-2057-4941-8ec9-6199b8a6c2a9'
-				and message.contactflowmoduletype = 'GetUserInput'
-				and message.results is not null
-				and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-				and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-				and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER)
-order by 1, 2
+SELECT CAST(json_extract(message, '$.contactid') AS VARCHAR) AS contactid,
+  CAST(json_extract(message, '$.timestamp') AS VARCHAR) AS timestamp,
+  CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) AS contactflowmoduletype,
+  CAST(json_extract(message, '$.results') AS VARCHAR) AS results
+FROM amazonconnectdataanalyticsdb.connect_cfl
+WHERE CAST(json_extract(message, '$.contactid') AS VARCHAR) = '5078c1b5-2057-4941-8ec9-6199b8a6c2a9'
+  AND CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) = 'GetUserInput'
+  AND CAST(json_extract(message, '$.results') AS VARCHAR) IS NOT NULL
+  AND YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1, 2
 ```
 
 Another example for all DTMF inputs for the current day:
 
 ```sql
-select message.contactid,
-			 message.timestamp,
-			 message.contactflowmoduletype,
-			 message.results
-
-from amazonconnectdataanalyticsdb.connect_cfl
-where message.contactflowmoduletype = 'GetUserInput'
-				and message.results is not null
-				and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-				and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-				and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER)
-order by 1, 2
+SELECT CAST(json_extract(message, '$.contactid') AS VARCHAR) AS contactid,
+  CAST(json_extract(message, '$.timestamp') AS VARCHAR) AS timestamp,
+  CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) AS contactflowmoduletype,
+  CAST(json_extract(message, '$.results') AS VARCHAR) AS results
+FROM amazonconnectdataanalyticsdb.connect_cfl
+WHERE CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) = 'GetUserInput'
+  AND CAST(json_extract(message, '$.results') AS VARCHAR) IS NOT NULL
+  AND YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1, 2
 ```
 
 Result set example:  
@@ -803,18 +792,17 @@ Contact Attribute in our Contact Flow, hence to get all Custom Attributes, for a
 the following query:
 
 ```sql
-select message.contactid,
-			 message.timestamp,
-			 message.contactflowmoduletype,
-			 message.parameters.key,
-			 message.parameters.value
-
-from amazonconnectdataanalyticsdb.connect_cfl
-where message.contactflowmoduletype = 'SetAttributes'
-				and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-				and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-				and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER)
-order by 1, 2
+SELECT CAST(json_extract(message, '$.contactid') AS VARCHAR) AS contactid,
+  CAST(json_extract(message, '$.timestamp') AS VARCHAR) AS timestamp,
+  CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) AS contactflowmoduletype,
+  CAST(json_extract(message, '$.parameters.key') AS VARCHAR) AS KEY,
+  CAST(json_extract(message, '$.parameters.value') AS VARCHAR) AS value
+FROM amazonconnectdataanalyticsdb.connect_cfl
+WHERE CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) = 'SetAttributes'
+  AND YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1, 2
 ```
 
 An example of the result set:  
@@ -823,38 +811,36 @@ An example of the result set:
 To get all attributes for a specific `contactid` execute the following:
 
 ```sql
-select message.contactid,
-			 message.timestamp,
-			 message.contactflowmoduletype,
-			 message.parameters.key,
-			 message.parameters.value
-
-from amazonconnectdataanalyticsdb.connect_cfl
-where message.contactid = 'cdd1cbaa-028a-4909-8b51-affdcef597f0'
-				and message.contactflowmoduletype = 'SetAttributes'
-				and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-				and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-				and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER)
-order by 1, 2
+SELECT CAST(json_extract(message, '$.contactid') AS VARCHAR) AS contactid,
+  CAST(json_extract(message, '$.timestamp') AS VARCHAR) AS timestamp,
+  CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) AS contactflowmoduletype,
+  CAST(json_extract(message, '$.parameters.key') AS VARCHAR) AS KEY,
+  CAST(json_extract(message, '$.parameters.value') AS VARCHAR) AS value
+FROM amazonconnectdataanalyticsdb.connect_cfl
+WHERE CAST(json_extract(message, '$.contactid') AS VARCHAR) = 'fc9d512e-c88d-4922-a613-bb1d779cd08d'
+  AND CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) = 'SetAttributes'
+  AND YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1, 2
 ```
 
 If we want to filter based on specific Custom Attribute, the query would be as following:
 
 ```sql
-select message.contactid,
-			 message.timestamp,
-			 message.contactflowmoduletype,
-			 message.parameters.key,
-			 message.parameters.value
-
-from amazonconnectdataanalyticsdb.connect_cfl
-where message.contactid = 'cdd1cbaa-028a-4909-8b51-affdcef597f0'
-				and message.contactflowmoduletype = 'SetAttributes'
-				and message.parameters.key = 'CallReason'
-				and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-				and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-				and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER)
-order by 1, 2
+SELECT CAST(json_extract(message, '$.contactid') AS VARCHAR) AS contactid,
+  CAST(json_extract(message, '$.timestamp') AS VARCHAR) AS timestamp,
+  CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) AS contactflowmoduletype,
+  CAST(json_extract(message, '$.parameters.key') AS VARCHAR) AS KEY,
+  CAST(json_extract(message, '$.parameters.value') AS VARCHAR) AS value
+FROM amazonconnectdataanalyticsdb.connect_cfl
+WHERE CAST(json_extract(message, '$.contactid') AS VARCHAR) = 'fc9d512e-c88d-4922-a613-bb1d779cd08d'
+  AND CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) = 'SetAttributes'
+  AND CAST(json_extract(message, '$.parameters.key') AS VARCHAR) = 'CallReason'
+  AND YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1, 2
 ```
 
 In the Contact Flow Logs, you can also find a result of your Lambda function, or a response from your Lex bot. Although
@@ -882,23 +868,15 @@ We are going to start with a simple query that would give us a list of contact f
 Athena Console, please execute the following:
 
 ```sql
-select from_iso8601_timestamp(initiationtimestamp) as initiationtimestamp,
-			 contactId,
-			 customerendpoint.address                    as phone_number,
-			 from_iso8601_timestamp(disconnecttimestamp) as disconnecttimestamp
-
-from amazonconnectdataanalyticsdb.connect_ctr
-where
-	year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-order by 1
+SELECT from_iso8601_timestamp(initiationtimestamp) AS initiationtimestamp,
+  contactId,
+  customerendpoint.address AS phone_number,
+  from_iso8601_timestamp(disconnecttimestamp) AS disconnecttimestamp
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1
 ```
 
 The result set would contain the following:  
@@ -907,24 +885,16 @@ The result set would contain the following:
 In the previous result, we can’t see the call reason, hence we need additional column in our query:
 
 ```sql
-select from_iso8601_timestamp(initiationtimestamp)               as initiationtimestamp,
-			 contactId,
-			 customerendpoint.address                                  as phone_number,
-			 CAST(json_extract(attributes, '$.callreason') as VARCHAR) as call_reason,
-			 from_iso8601_timestamp(disconnecttimestamp)               as disconnecttimestamp
-
-from amazonconnectdataanalyticsdb.connect_ctr
-where
-	year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-order by 1
+SELECT from_iso8601_timestamp(initiationtimestamp) AS initiationtimestamp,
+  contactId,
+  customerendpoint.address AS phone_number,
+  CAST(json_extract(attributes, '$.callreason') AS VARCHAR) AS call_reason,
+  from_iso8601_timestamp(disconnecttimestamp) AS disconnecttimestamp
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1
 ```
 
 Please note the `json_extract` function applied in the new column – since we don’t know all the attributes that might be
@@ -935,16 +905,16 @@ official [documentation](https://docs.aws.amazon.com/athena/latest/ug/extracting
 The result of the query would be as following:  
 ![Screenshot](images/ResultSetCTR-CurrentDateCallReason.png)
 
-Let's say toward the end of the year there are a an unsual amount of disconnected calls. To analyze the reason for calls
+Let's say toward the end of the year there are an unusual amount of disconnected calls. To analyze the reason for calls
 disconnecting over a certain period of time you can use the following query:
 
 ```sql
-select *
-from (select disconnectreason,
-						 cast(date_parse(cast(year * 10000 + month * 100 + day as varchar (255)), '%Y%m%d') as date) as x
-			from amazonconnectdataanalyticsdb.connect_ctr)
-where x between date ('2022-07-15') AND date ('2022-08-12')
-
+SELECT *
+FROM
+  (SELECT disconnectreason,
+    CAST(date_parse(CAST(YEAR * 10000 + MONTH * 100 + DAY AS varchar (255)), '%Y%m%d') AS date) AS x
+  FROM amazonconnectdataanalyticsdb.connect_ctr)
+WHERE x BETWEEN date ('2023-01-01') AND date ('2023-08-12')
 ```
 
 NOTE: The date range is in the following format: 'YYYY-MM-DD'. You can change the dates in the query to match your
@@ -956,20 +926,15 @@ The result of the query would be as following:
 To get a number of calls, per day, per call reason, we can use the following query:
 
 ```sql
-
-select date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) as day, CAST(json_extract(attributes, '$.callreason') as VARCHAR) as call_reason, count(contactid) as number_of_calls
-from amazonconnectdataanalyticsdb.connect_ctr
-where year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-group by 1, 2
-order by 1
+SELECT date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) AS DAY,
+  CAST(json_extract(attributes, '$.callreason') AS VARCHAR) AS call_reason,
+  count(contactid) AS number_of_calls
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+GROUP BY 1, 2
+ORDER BY 1
 ```
 
 The result of this query would be as following:  
@@ -978,50 +943,32 @@ The result of this query would be as following:
 In the next query, we are going to count calls that were abandoned while waiting in the queue:
 
 ```sql
-select date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) as day,
-  CAST(json_extract(attributes, '$.callreason') as VARCHAR) as call_reason,
-  count(contactid) as number_of_calls
-
-from amazonconnectdataanalyticsdb.connect_ctr
-where
-	agent is null
-	and year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-
-group by 1, 2
-order by 1
+SELECT date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) AS DAY,
+  CAST(json_extract(attributes, '$.callreason') AS VARCHAR) AS call_reason,
+  count(contactid) AS number_of_calls
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE agent IS NULL
+  AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+GROUP BY 1, 2
+ORDER BY 1
 ```
 
 We could also expand our query to see the average abandon time:
 
 ```sql
-select date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) as day,
-  CAST(json_extract(attributes, '$.callreason') as VARCHAR) as call_reason,
-  count(contactid) as number_of_calls,
-  avg(queue.duration) as avg_queue_duration
-
-from amazonconnectdataanalyticsdb.connect_ctr
-where
-	agent is null
-	and year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-
-group by 1, 2
-order by 1
+SELECT date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) AS DAY,
+  CAST(json_extract(attributes, '$.callreason') AS VARCHAR) AS call_reason,
+  count(contactid) AS number_of_calls,
+  avg(queue.duration) AS avg_queue_duration
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE agent IS NULL
+  AND YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+GROUP BY 1, 2
+ORDER BY 1
 ```
 
 The result gets additional column – Average time spent in queue, before abandoning:  
@@ -1030,29 +977,18 @@ The result gets additional column – Average time spent in queue, before abando
 To set the threshold and only count abandoned calls which were waiting longer than 12 seconds in the queue:
 
 ```sql
-select date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) as day,
-  CAST(json_extract(attributes, '$.callreason') as VARCHAR) as call_reason,
-  count(contactid) as number_of_calls,
-  avg(queue.duration) as avg_queue_duration
-
-from amazonconnectdataanalyticsdb.connect_ctr
-where
-	agent is null
-	and queue.duration
-		> 12
-
-	and year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-
-group by 1, 2
-order by 1
+SELECT date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) AS DAY,
+  CAST(json_extract(attributes, '$.callreason') AS VARCHAR) AS call_reason,
+  count(contactid) AS number_of_calls,
+  avg(queue.duration) AS avg_queue_duration
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE agent IS NULL
+  AND queue.duration > 12
+  AND YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+GROUP BY 1, 2
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1061,29 +997,19 @@ The result set would be as following:
 The next query focus is on answered calls, time spent in queue and agent handling time:
 
 ```sql
-select date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) as day,
-  CAST(json_extract(attributes, '$.callreason') as VARCHAR) as call_reason,
-  count(contactid) as number_of_calls,
-  avg(queue.duration) as avg_queue_duration,
-  avg(agent.agentinteractionduration) as avg_agentinteractionduration,
-  avg(agent.aftercontactworkduration) as avg_acw_duration
-
-from amazonconnectdataanalyticsdb.connect_ctr
-where
-	agent is not null
-
-	and year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-
-group by 1, 2
-order by 1
+SELECT date_trunc('day', from_iso8601_timestamp(initiationtimestamp)) AS DAY,
+  CAST(json_extract(attributes, '$.callreason') AS VARCHAR) AS call_reason,
+  count(contactid) AS number_of_calls,
+  avg(queue.duration) AS avg_queue_duration,
+  avg(agent.agentinteractionduration) AS avg_agentinteractionduration,
+  avg(agent.aftercontactworkduration) AS avg_acw_duration
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE agent IS NOT NULL
+  AND YEAR=CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH=CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY=CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+GROUP BY 1, 2
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1103,27 +1029,28 @@ in-memory database, such as Amazon ElastiCache.
 To get the current status from Agent Event records, open the Amazon Athena Console and run the following query:
 
 ```sql
-with dataset AS (select from_iso8601_timestamp(eventtimestamp)      as last_update_time,
-												currentagentsnapshot.configuration.username as agent_username,
-												currentagentsnapshot.agentstatus.name       as current_status,
-												eventtype
-
-								 FROM amazonconnectdataanalyticsdb.connect_ae
-								 where eventtype <> 'HEART_BEAT'
-												 and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-												 and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-												 and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER))
-select dataset.agent_username,
-			 dataset.current_status,
-			 dataset.last_update_time
-from (
-			 dataset inner join (select max(last_update_time) as max_update_time, i_dataset.agent_username
-													 from dataset i_dataset
-													 group by 2) i_dataset on ((i_dataset.max_update_time = dataset.last_update_time) and
-																										 (i_dataset.agent_username = dataset.agent_username)))
-where dataset.current_status <> 'Offline'
-order by 1
-
+WITH dataset AS
+  (SELECT from_iso8601_timestamp(eventtimestamp) AS last_update_time,
+    currentagentsnapshot.configuration.username AS agent_username,
+    currentagentsnapshot.agentstatus.name AS current_status,
+    eventtype
+  FROM amazonconnectdataanalyticsdb.connect_ae
+WHERE eventtype <> 'HEART_BEAT'
+  AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER))
+SELECT dataset.agent_username,
+  dataset.current_status,
+  dataset.last_update_time
+FROM (dataset
+  INNER JOIN
+  (SELECT max(last_update_time) AS max_update_time,
+    i_dataset.agent_username
+  FROM dataset i_dataset
+  GROUP BY 2) i_dataset ON ((i_dataset.max_update_time = dataset.last_update_time)
+    AND (i_dataset.agent_username = dataset.agent_username)))
+WHERE dataset.current_status <> 'Offline'
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1138,28 +1065,30 @@ would stay *Available*. We need additional column to be able to tell if an agent
 inbound call and then run the following query:
 
 ```sql
-with dataset AS (select from_iso8601_timestamp(eventtimestamp)      as last_update_time,
-												currentagentsnapshot.configuration.username as agent_username,
-												currentagentsnapshot.agentstatus.name       as current_status,
-												eventtype,
-												currentagentsnapshot.contacts               as contacts
-
-								 FROM amazonconnectdataanalyticsdb.connect_ae
-								 where eventtype <> 'HEART_BEAT'
-												 and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-												 and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-												 and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER))
-select dataset.agent_username,
-			 dataset.current_status,
-			 cardinality(dataset.contacts) as num_of_contacts,
-			 dataset.last_update_time
-from (
-			 dataset inner join (select max(last_update_time) as max_update_time, i_dataset.agent_username
-													 from dataset i_dataset
-													 group by 2) i_dataset on ((i_dataset.max_update_time = dataset.last_update_time) and
-																										 (i_dataset.agent_username = dataset.agent_username)))
-where dataset.current_status <> 'Offline'
-order by 1
+WITH dataset AS
+  (SELECT from_iso8601_timestamp(eventtimestamp) AS last_update_time,
+    currentagentsnapshot.configuration.username AS agent_username,
+    currentagentsnapshot.agentstatus.name AS current_status,
+    eventtype,
+    currentagentsnapshot.contacts AS contacts
+  FROM amazonconnectdataanalyticsdb.connect_ae
+  WHERE eventtype <> 'HEART_BEAT'
+    AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+    AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+    AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER))
+SELECT dataset.agent_username,
+  dataset.current_status,
+  cardinality(dataset.contacts) AS num_of_contacts,
+  dataset.last_update_time
+FROM (dataset
+  INNER JOIN
+  (SELECT max(last_update_time) AS max_update_time,
+        i_dataset.agent_username
+  FROM dataset i_dataset
+  GROUP BY 2) i_dataset ON ((i_dataset.max_update_time = dataset.last_update_time)
+    AND (i_dataset.agent_username = dataset.agent_username)))
+WHERE dataset.current_status <> 'Offline'
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1170,29 +1099,34 @@ contact, but multiple Chat contacts. We could expand our query and check if an a
 display the contact state:
 
 ```sql
-with dataset AS (select from_iso8601_timestamp(eventtimestamp)      as last_update_time,
-												currentagentsnapshot.configuration.username as agent_username,
-												currentagentsnapshot.agentstatus.name       as current_status,
-												eventtype,
-												currentagentsnapshot.contacts               as contacts
-
-								 FROM amazonconnectdataanalyticsdb.connect_ae
-								 where eventtype <> 'HEART_BEAT'
-												 and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-												 and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-												 and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER))
-select dataset.agent_username,
-			 dataset.current_status,
-			 cardinality(dataset.contacts)                                                        as num_of_contacts,
-			 CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].state ELSE '' END as contact_state,
-			 dataset.last_update_time
-from (
-			 dataset inner join (select max(last_update_time) as max_update_time, i_dataset.agent_username
-													 from dataset i_dataset
-													 group by 2) i_dataset on ((i_dataset.max_update_time = dataset.last_update_time) and
-																										 (i_dataset.agent_username = dataset.agent_username)))
-where dataset.current_status <> 'Offline'
-order by 1
+WITH dataset AS
+  (SELECT from_iso8601_timestamp(eventtimestamp) AS last_update_time,
+    currentagentsnapshot.configuration.username AS agent_username,
+    currentagentsnapshot.agentstatus.name AS current_status,
+    eventtype,
+    currentagentsnapshot.contacts AS contacts
+  FROM amazonconnectdataanalyticsdb.connect_ae
+  WHERE eventtype <> 'HEART_BEAT'
+    AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+    AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+    AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER))
+SELECT dataset.agent_username,
+  dataset.current_status,
+  cardinality(dataset.contacts) AS num_of_contacts,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].state
+    ELSE ''
+    END AS contact_state,
+  dataset.last_update_time
+FROM (dataset
+  INNER JOIN
+  (SELECT max(last_update_time) AS max_update_time,
+        i_dataset.agent_username
+   FROM dataset i_dataset
+   GROUP BY 2) i_dataset ON ((i_dataset.max_update_time = dataset.last_update_time)
+    AND (i_dataset.agent_username = dataset.agent_username)))
+WHERE dataset.current_status <> 'Offline'
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1201,31 +1135,42 @@ The result set would be as following:
 We can also add the Queue name of the contact and ContactId:
 
 ```sql
-with dataset AS (select from_iso8601_timestamp(eventtimestamp)      as last_update_time,
-												currentagentsnapshot.configuration.username as agent_username,
-												currentagentsnapshot.agentstatus.name       as current_status,
-												eventtype,
-												currentagentsnapshot.contacts               as contacts
-
-								 FROM amazonconnectdataanalyticsdb.connect_ae
-								 where eventtype <> 'HEART_BEAT'
-												 and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-												 and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-												 and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER))
-select dataset.agent_username,
-			 dataset.current_status,
-			 cardinality(dataset.contacts)                                                             as num_of_contacts,
-			 CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].state ELSE '' END      as contact_state,
-			 CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].queue.name ELSE '' END as contact_queue,
-			 CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].contactid ELSE '' END  as contactid,
-			 dataset.last_update_time
-from (
-			 dataset inner join (select max(last_update_time) as max_update_time, i_dataset.agent_username
-													 from dataset i_dataset
-													 group by 2) i_dataset on ((i_dataset.max_update_time = dataset.last_update_time) and
-																										 (i_dataset.agent_username = dataset.agent_username)))
-where dataset.current_status <> 'Offline'
-order by 1
+WITH dataset AS
+  (SELECT from_iso8601_timestamp(eventtimestamp) AS last_update_time,
+    currentagentsnapshot.configuration.username AS agent_username,
+    currentagentsnapshot.agentstatus.name AS current_status,
+    eventtype,
+    currentagentsnapshot.contacts AS contacts
+  FROM amazonconnectdataanalyticsdb.connect_ae
+  WHERE eventtype <> 'HEART_BEAT'
+    AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+    AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+    AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER))
+SELECT dataset.agent_username,
+  dataset.current_status,
+  cardinality(dataset.contacts) AS num_of_contacts,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].state
+    ELSE ''
+    END AS contact_state,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].queue.name
+    ELSE ''
+    END AS contact_queue,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].contactid
+    ELSE ''
+    END AS contactid,
+  dataset.last_update_time
+FROM (dataset
+  INNER JOIN
+  (SELECT max(last_update_time) AS max_update_time,
+        i_dataset.agent_username
+   FROM dataset i_dataset
+   GROUP BY 2) i_dataset ON ((i_dataset.max_update_time = dataset.last_update_time)
+    AND (i_dataset.agent_username = dataset.agent_username)))
+WHERE dataset.current_status <> 'Offline'
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1234,49 +1179,54 @@ The result set would be as following:
 A more advanced query would also display a Call Reason, by joining the data from Contact Flow Logs (CFL) table:
 
 ```sql
-with dataset AS (select from_iso8601_timestamp(eventtimestamp)      as last_update_time,
-												currentagentsnapshot.configuration.username as agent_username,
-												currentagentsnapshot.agentstatus.name       as current_status,
-												eventtype,
-												currentagentsnapshot.contacts               as contacts
-
-								 FROM amazonconnectdataanalyticsdb.connect_ae
-								 where eventtype <> 'HEART_BEAT'
-												 and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-												 and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-												 and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER))
-select dataset.agent_username,
-			 dataset.current_status,
-			 cardinality(dataset.contacts)                                                             as num_of_contacts,
-			 CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].state ELSE '' END      as contact_state,
-			 CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].queue.name ELSE '' END as contact_queue,
-
-			 CASE cardinality(dataset.contacts)
-				 WHEN 1 THEN
-					 (select message.parameters.value as call_reason
-						from amazonconnectdataanalyticsdb.connect_cfl
-						where message.contactflowmoduletype = 'SetAttributes'
-										and message.parameters.key = 'CallReason'
-										and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-										and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-										and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER) limit 1)
+WITH dataset AS
+  (SELECT from_iso8601_timestamp(eventtimestamp) AS last_update_time,
+    currentagentsnapshot.configuration.username AS agent_username,
+    currentagentsnapshot.agentstatus.name AS current_status,
+    eventtype,
+    currentagentsnapshot.contacts AS contacts
+  FROM amazonconnectdataanalyticsdb.connect_ae
+  WHERE eventtype <> 'HEART_BEAT'
+    AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+    AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+    AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER))
+SELECT dataset.agent_username,
+  dataset.current_status,
+  cardinality(dataset.contacts) AS num_of_contacts,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].state
     ELSE ''
-END
-as call_reason,
-    
-    CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].contactid ELSE ''
-END
-as contactid,
-    dataset.last_update_time
-from(
-    dataset inner join (
-        select max(last_update_time) as max_update_time, i_dataset.agent_username
-        from dataset i_dataset
-        group by 2
-    ) i_dataset on ((i_dataset.max_update_time = dataset.last_update_time) and (i_dataset.agent_username = dataset.agent_username))
-)
-where dataset.current_status<>'Offline'
-order by 1
+    END AS contact_state,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].queue.name
+    ELSE ''
+    END AS contact_queue,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN
+      (SELECT CAST(json_extract(message, '$.parameters.value') AS VARCHAR) AS call_reason
+      FROM amazonconnectdataanalyticsdb.connect_cfl
+      WHERE CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) = 'SetAttributes'
+        AND CAST(json_extract(message, '$.parameters.key') AS VARCHAR) = 'CallReason'
+        AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+        AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+        AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+     LIMIT 1)
+     ELSE ''
+END AS call_reason,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].contactid
+    ELSE ''
+END AS contactid,
+  dataset.last_update_time
+FROM(dataset
+  INNER JOIN
+    (SELECT max(last_update_time) AS max_update_time,
+        i_dataset.agent_username
+    FROM dataset i_dataset
+    GROUP BY 2) i_dataset ON ((i_dataset.max_update_time = dataset.last_update_time)
+        AND (i_dataset.agent_username = dataset.agent_username)))
+WHERE dataset.current_status<>'Offline'
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1295,23 +1245,22 @@ you could create a query that would display a separate row for each contact agen
 To get a simple trace for a specific agent, run the following query:
 
 ```sql
-select from_iso8601_timestamp(eventtimestamp)      as event_time,
-			 currentagentsnapshot.configuration.username as agent_username,
-			 currentagentsnapshot.agentstatus.name       as current_status,
-			 eventtype,
-			 cardinality(currentagentsnapshot.contacts)  as num_of_contacts,
-			 CASE cardinality(currentagentsnapshot.contacts)
-				 WHEN 1 THEN currentagentsnapshot.contacts[1].state
-				 ELSE '' END                               as contact_state
-
-
+SELECT from_iso8601_timestamp(eventtimestamp) AS event_time,
+  currentagentsnapshot.configuration.username AS agent_username,
+  currentagentsnapshot.agentstatus.name AS current_status,
+  eventtype,
+  cardinality(currentagentsnapshot.contacts) AS num_of_contacts,
+  CASE cardinality(currentagentsnapshot.contacts)
+    WHEN 1 THEN currentagentsnapshot.contacts[1].state
+    ELSE ''
+    END AS contact_state
 FROM amazonconnectdataanalyticsdb.connect_ae
-where eventtype <> 'HEART_BEAT' and
-			currentagentsnapshot.configuration.username = 'agent1'
-				and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-				and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-				and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER)
-order by 1
+WHERE eventtype <> 'HEART_BEAT'
+  AND currentagentsnapshot.configuration.username = 'agent1'
+  AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1322,25 +1271,20 @@ The result set would be as following:
 Amazon Connect Data Analytics Sample solution leverages Amazon Connect Evaluation Forms metadata output files to provide
 insights into agent performance, and to help improve how agents interact with customers and resolve issues.
 
+To enable this examples, please navigate to the Amazon Connect console. On the left navigation bar, select "Analytics and optimization", then select "Contact Lens", then "Rules". Create a rule based on Conversation Analytics named `customer-loyalty-risk`.
+
 We are going to start with a simple query that would give us Average Agent and Average Customer sentiment, for the
 current month. In your Amazon Athena Console, please execute the following:
 
 ```sql
-select date_trunc('day', from_iso8601_timestamp(recordingtimestamp)) as day,
-    round(avg(coalesce(overallsentimentagent, 0)), 2) as avg_overall_sentiment_agent,
-    round(avg(coalesce(overallsentimentcustomer, 0)),2) as avg_overall_sentiment_customer
-
-from amazonconnectdataanalyticsdb.connect_cl
-where
-	year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-
-group by 1
-order by 1
+SELECT date_trunc('day', from_iso8601_timestamp(recordingtimestamp)) AS DAY,
+  round(avg(coalesce(overallsentimentagent, 0)), 2) AS avg_overall_sentiment_agent,
+  round(avg(coalesce(overallsentimentcustomer, 0)), 2) AS avg_overall_sentiment_customer
+FROM amazonconnectdataanalyticsdb.connect_cl
+WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+GROUP BY 1
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1352,32 +1296,23 @@ that ranges from -5 to +5 for each portion of the call. The final sentiment scor
 average of the scores assigned during the call. More information can be found in the
 official [documentation](https://docs.aws.amazon.com/connect/latest/adminguide/sentiment-scores.html).
 
-In the previous query, we can seethe overall sentiment for all calls, but we can also add Queue names by running the
+In the previous query, we can see the overall sentiment for all calls, but we can also add Queue names by running the
 following query:
 
 ```sql
-select date_trunc('day', from_iso8601_timestamp(recordingtimestamp)) as day,
-    queue.name as queue_name,
-    round(avg(coalesce(overallsentimentagent, 0)), 2) as avg_overall_sentiment_agent,
-    round(avg(coalesce(overallsentimentcustomer, 0)),2) as avg_overall_sentiment_customer
-
-from amazonconnectdataanalyticsdb.connect_cl
-	join amazonconnectdataanalyticsdb.connect_ctr
-on connect_cl.contactid = connect_ctr.contactid
-	and connect_cl.year = connect_ctr.year
-	and connect_cl.month = connect_ctr.month
-	and connect_cl.day = connect_ctr.day
-
-where
-	connect_cl.year= CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and connect_cl.month= CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-
-group by 1, 2
-order by 1
+SELECT date_trunc('day', from_iso8601_timestamp(recordingtimestamp)) AS DAY,
+  queue.name AS queue_name,
+  round(avg(coalesce(overallsentimentagent, 0)), 2) AS avg_overall_sentiment_agent,
+  round(avg(coalesce(overallsentimentcustomer, 0)), 2) AS avg_overall_sentiment_customer
+FROM amazonconnectdataanalyticsdb.connect_cl
+  JOIN amazonconnectdataanalyticsdb.connect_ctr ON connect_cl.contactid = connect_ctr.contactid
+  AND connect_cl.year = connect_ctr.year
+  AND connect_cl.month = connect_ctr.month
+  AND connect_cl.day = connect_ctr.day
+WHERE connect_cl.year= CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND connect_cl.month= CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+GROUP BY 1, 2
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1387,24 +1322,19 @@ Besides agent and customer sentiment, we can also analyze matched categories. Fo
 would return all contactIds and phone numbers where `customer-loyalty-risk` was identified:
 
 ```sql
-select from_iso8601_timestamp(connect_ctr.initiationtimestamp) as initiationtimestamp,
-			 connect_ctr.contactid,
-			 connect_ctr.customerendpoint.address                    as phone_number,
-			 matchedcategories
-
-from amazonconnectdataanalyticsdb.connect_cl
-			 join amazonconnectdataanalyticsdb.connect_ctr
-						on connect_cl.contactid = connect_ctr.contactid
-							and connect_cl.year = connect_ctr.year
-							and connect_cl.month = connect_ctr.month
-							and connect_cl.day = connect_ctr.day
-
-where connect_cl.year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-	and connect_cl.month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-
-	and contains(matchedcategories, 'customer-loyalty-risk')
-
-order by 1
+SELECT from_iso8601_timestamp(connect_ctr.initiationtimestamp) AS initiationtimestamp,
+  connect_ctr.contactid,
+  connect_ctr.customerendpoint.address AS phone_number,
+  matchedcategories
+FROM amazonconnectdataanalyticsdb.connect_cl
+    JOIN amazonconnectdataanalyticsdb.connect_ctr ON connect_cl.contactid = connect_ctr.contactid
+  AND connect_cl.year = connect_ctr.year
+  AND connect_cl.month = connect_ctr.month
+  AND connect_cl.day = connect_ctr.day
+WHERE connect_cl.year = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND connect_cl.month = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND contains(matchedcategories, 'customer-loyalty-risk')
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1413,30 +1343,29 @@ The result set would be as following:
 ### Analyze Evaluation Forms
 
 Amazon Connect Data Analytics Sample solution leverages Amazon Connect Contact Lens  **Post-call analytics** metadata
-output files to provide insights into customer conversations' caracteristics, and agent compliance.
+output files to provide insights into customer conversation characteristics, and agent compliance.
 
 We are going to start with a simple query that would give us all Evaluations (questions and answers), for the current
 day. In your Amazon Athena Console, please execute the following:
 
 ```sql
-with dataset AS (select contactid,
-												from_iso8601_timestamp(evaluationsubmittimestamp) as evaluationsubmittimestamp,
-												QA.evaluationquestionanswers
-								 from "amazonconnectdataanalyticsdb"."connect_ef"
-												cross join UNNEST(evaluationquestionanswers) as QA(evaluationquestionanswers)
-
-								 where year = CAST (substr(to_iso8601(current_date), 1, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date), 6, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date), 9, 2) as INTEGER)
-	)
-select evaluationsubmittimestamp,
-			 contactid,
-			 evaluationquestionanswers.fullsectiontitle,
-			 evaluationquestionanswers.questiontext,
-			 evaluationquestionanswers.questionanswervalue,
-			 evaluationquestionanswers.questionanswerscorepoints
-from dataset
-order by 1
+WITH dataset AS
+    (SELECT contactid,
+        from_iso8601_timestamp(evaluationsubmittimestamp) AS evaluationsubmittimestamp,
+        QA.evaluationquestionanswers
+    FROM "amazonconnectdataanalyticsdb"."connect_ef"
+        CROSS JOIN UNNEST(evaluationquestionanswers) AS QA(evaluationquestionanswers)
+    WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER) )
+SELECT evaluationsubmittimestamp,
+  contactid,
+  evaluationquestionanswers.fullsectiontitle,
+  evaluationquestionanswers.questiontext,
+  evaluationquestionanswers.questionanswervalue,
+  evaluationquestionanswers.questionanswerscorepercentage
+FROM dataset
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1446,27 +1375,25 @@ In a similar way, we can see all evaluations, for the current day, for a specifi
 Console, please execute the following:
 
 ```sql
-with dataset AS (select contactid,
-												from_iso8601_timestamp(evaluationsubmittimestamp) as evaluationsubmittimestamp,
-												evaluationDefinitionTitle,
-												QA.evaluationquestionanswers
-								 from "amazonconnectdataanalyticsdb"."connect_ef"
-												cross join UNNEST(evaluationquestionanswers) as QA(evaluationquestionanswers)
-
-								 where year = CAST (substr(to_iso8601(current_date), 1, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date), 6, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date), 9, 2) as INTEGER)
-	and evaluationDefinitionTitle = 'SalesDepartmentForm1'
-
-	)
-select evaluationsubmittimestamp,
-			 contactid,
-			 evaluationquestionanswers.fullsectiontitle,
-			 evaluationquestionanswers.questiontext,
-			 evaluationquestionanswers.questionanswervalue,
-			 evaluationquestionanswers.questionanswerscorepoints
-from dataset
-order by 1
+WITH dataset AS
+    (SELECT contactid,
+      from_iso8601_timestamp(evaluationsubmittimestamp) AS evaluationsubmittimestamp,
+      evaluationDefinitionTitle,
+      QA.evaluationquestionanswers
+    FROM "amazonconnectdataanalyticsdb"."connect_ef"
+      CROSS JOIN UNNEST(evaluationquestionanswers) AS QA(evaluationquestionanswers)
+    WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+  AND evaluationDefinitionTitle = 'SalesDepartmentForm1' )
+SELECT evaluationsubmittimestamp,
+  contactid,
+  evaluationquestionanswers.fullsectiontitle,
+  evaluationquestionanswers.questiontext,
+  evaluationquestionanswers.questionanswervalue,
+  evaluationquestionanswers.questionanswerscorepercentage
+FROM dataset
+ORDER BY 1
 ```  
 
 The result set would be as following:  
@@ -1476,26 +1403,23 @@ To focus on Sections Scoring, we can switch to ***Evaluation Sections Scores*** 
 Console, please execute the following:
 
 ```sql
-with dataset AS (select contactid,
-												from_iso8601_timestamp(evaluationsubmittimestamp) as evaluationsubmittimestamp,
-												evaluationDefinitionTitle,
-												SScores.evaluationsectionsscores
-								 from "amazonconnectdataanalyticsdb"."connect_ef"
-												cross join UNNEST(evaluationsectionsscores) as SScores(evaluationsectionsscores)
-
-								 where year = CAST (substr(to_iso8601(current_date), 1, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date), 6, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date), 9, 2) as INTEGER)
-	and evaluationDefinitionTitle = 'SalesDepartmentForm1'
-
-	)
-select evaluationsubmittimestamp,
-			 contactid,
-			 evaluationsectionsscores.fullsectiontitle,
-			 evaluationsectionsscores.evaluationSectionScorePerc
-
-from dataset
-order by 1
+WITH dataset AS
+    (SELECT contactid,
+      from_iso8601_timestamp(evaluationsubmittimestamp) AS evaluationsubmittimestamp,
+      evaluationDefinitionTitle,
+      SScores.evaluationsectionsscores
+    FROM "amazonconnectdataanalyticsdb"."connect_ef"
+      CROSS JOIN UNNEST(evaluationsectionsscores) AS SScores(evaluationsectionsscores)
+    WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+  AND evaluationDefinitionTitle = 'SalesDepartmentForm1' )
+SELECT evaluationsubmittimestamp,
+  contactid,
+  evaluationsectionsscores.sectiontitle,
+  evaluationsectionsscores.sectionscorepercentage
+FROM dataset
+ORDER BY 1
 ```  
 
 The result set would be as following:  
@@ -1504,26 +1428,23 @@ The result set would be as following:
 To get average scores per section, per day, please execute the following:
 
 ```sql
-with dataset AS (select evaluationsubmittimestamp,
-												evaluationDefinitionTitle,
-												SScores.evaluationsectionsscores
-								 from "amazonconnectdataanalyticsdb"."connect_ef"
-												cross join UNNEST(evaluationsectionsscores) as SScores(evaluationsectionsscores)
-
-								 where year = CAST (substr(to_iso8601(current_date), 1, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date), 6, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date), 9, 2) as INTEGER)
-	and evaluationDefinitionTitle = 'SalesDepartmentForm1'
-
-	)
-select date_trunc('day', from_iso8601_timestamp(evaluationsubmittimestamp)) as day,
-    evaluationDefinitionTitle,
-    evaluationsectionsscores.fullsectiontitle,
-    round(avg(coalesce(evaluationsectionsscores.evaluationSectionScorePerc, 0)), 2) as avg_section_score_perc
-
-from dataset
-group by 1, 2, 3
-order by 1
+WITH dataset AS
+    (SELECT evaluationsubmittimestamp,
+      evaluationDefinitionTitle,
+      SScores.evaluationsectionsscores
+    FROM "amazonconnectdataanalyticsdb"."connect_ef"
+      CROSS JOIN UNNEST(evaluationsectionsscores) AS SScores(evaluationsectionsscores)
+    WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+  AND evaluationDefinitionTitle = 'SalesDepartmentForm1' )
+SELECT date_trunc('day', from_iso8601_timestamp(evaluationsubmittimestamp)) AS DAY,
+  evaluationDefinitionTitle,
+  evaluationsectionsscores.sectiontitle,
+  round(avg(coalesce(evaluationsectionsscores.sectionscorepercentage, 0)), 2) AS avg_section_score_perc
+FROM dataset
+GROUP BY 1, 2, 3
+ORDER BY 1
 ```
 
 The result set would be as following:  
@@ -1533,24 +1454,15 @@ To focus on Evaluation Form Scoring, we can switch to ***Evaluation Form Total S
 Amazon Athena Console, please execute the following:
 
 ```sql
-select contactid,
-			 from_iso8601_timestamp(evaluationsubmittimestamp) as evaluationsubmittimestamp,
-			 evaluationDefinitionTitle,
-			 evaluationformtotalscore.evaluationformtotalscorepoints,
-			 evaluationformtotalscore.evaluationformtotalscoreperc
-from "amazonconnectdataanalyticsdb"."connect_ef"
-
-where year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-
-	and evaluationDefinitionTitle = 'SalesDepartmentForm1'
+SELECT contactid,
+  from_iso8601_timestamp(evaluationsubmittimestamp) AS evaluationsubmittimestamp,
+  evaluationDefinitionTitle,
+  evaluationformtotalscorepercentage
+FROM "amazonconnectdataanalyticsdb"."connect_ef"
+WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+  AND evaluationDefinitionTitle = 'SalesDepartmentForm1'
 ```
 
 The result set would be as following:  
@@ -1559,27 +1471,16 @@ The result set would be as following:
 To get average total scores, per day, please execute the following:
 
 ```sql
-select date_trunc('day', from_iso8601_timestamp(evaluationsubmittimestamp)) as day,
-    evaluationDefinitionTitle,
-    round(avg(coalesce(evaluationformtotalscore.evaluationformtotalscorepoints, 0)), 2) as avg_total_score_points,
-    round(avg(coalesce(evaluationformtotalscore.evaluationformtotalscoreperc, 0)), 2) as avg_total_score_perc
-
-from "amazonconnectdataanalyticsdb"."connect_ef"
-
-where year = CAST (substr(to_iso8601(current_date)
-		, 1
-		, 4) as INTEGER)
-	and month = CAST (substr(to_iso8601(current_date)
-		, 6
-		, 2) as INTEGER)
-	and day = CAST (substr(to_iso8601(current_date)
-		, 9
-		, 2) as INTEGER)
-
-	and evaluationDefinitionTitle = 'SalesDepartmentForm1'
-
-group by 1, 2
-order by 1, 2
+SELECT date_trunc('day', from_iso8601_timestamp(evaluationsubmittimestamp)) AS DAY,
+  evaluationDefinitionTitle,
+  round(avg(coalesce(evaluationformtotalscorepercentage, 0)), 2) AS avg_total_score_perc
+FROM "amazonconnectdataanalyticsdb"."connect_ef"
+WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1 ,4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6 ,2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9 ,2) AS INTEGER)
+  AND evaluationDefinitionTitle = 'SalesDepartmentForm1'
+GROUP BY 1, 2
+ORDER BY 1, 2
 ```
 
 The result set would be as following:  
@@ -1641,24 +1542,16 @@ We are going to start with a simple tabular report:
 1. Next, copy the CTR query that you have created previously
 
 ```sql
-     select from_iso8601_timestamp(initiationtimestamp)               as initiationtimestamp,
-						contactId,
-						customerendpoint.address                                  as phone_number,
-						CAST(json_extract(attributes, '$.callreason') as VARCHAR) as call_reason,
-						from_iso8601_timestamp(disconnecttimestamp)               as disconnecttimestamp
-
-		 from amazonconnectdataanalyticsdb.connect_ctr
-		 where
-			 year = CAST (substr(to_iso8601(current_date)
-				 , 1
-				 , 4) as INTEGER)
-			 and month = CAST (substr(to_iso8601(current_date)
-				 , 6
-				 , 2) as INTEGER)
-			 and day = CAST (substr(to_iso8601(current_date)
-				 , 9
-				 , 2) as INTEGER)
-		 order by 1
+SELECT from_iso8601_timestamp(initiationtimestamp) AS initiationtimestamp,
+  contactId,
+  customerendpoint.address AS phone_number,
+  CAST(json_extract(attributes, '$.callreason') AS VARCHAR) AS call_reason,
+  from_iso8601_timestamp(disconnecttimestamp) AS disconnecttimestamp
+FROM amazonconnectdataanalyticsdb.connect_ctr
+WHERE YEAR = CAST (substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+  AND MONTH = CAST (substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+  AND DAY = CAST (substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+ORDER BY 1
 ```
 
 1. Click **Confirm query**
@@ -1696,49 +1589,54 @@ Let’s make a Dashboard for Agent States:
 1. Paste the following query:
 
 ```sql
-     with dataset AS (select from_iso8601_timestamp(eventtimestamp)      as last_update_time,
-														 currentagentsnapshot.configuration.username as agent_username,
-														 currentagentsnapshot.agentstatus.name       as current_status,
-														 eventtype,
-														 currentagentsnapshot.contacts               as contacts
-
-											FROM amazonconnectdataanalyticsdb.connect_ae
-											where eventtype <> 'HEART_BEAT'
-															and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-															and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-															and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER))
-		 select dataset.agent_username,
-						dataset.current_status,
-						cardinality(dataset.contacts)                                                             as num_of_contacts,
-						CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].state ELSE '' END      as contact_state,
-						CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].queue.name ELSE '' END as contact_queue,
-
-						CASE cardinality(dataset.contacts)
-							WHEN 1 THEN
-								(select message.parameters.value as call_reason
-								 from amazonconnectdataanalyticsdb.connect_cfl
-								 where message.contactflowmoduletype = 'SetAttributes'
-												 and message.parameters.key = 'CallReason'
-												 and year = CAST(substr(to_iso8601(current_date), 1, 4) as INTEGER)
-												 and month = CAST(substr(to_iso8601(current_date), 6, 2) as INTEGER)
-												 and day = CAST(substr(to_iso8601(current_date), 9, 2) as INTEGER) limit 1)
-				 ELSE ''
-END
-as call_reason,
-				 
-				 CASE cardinality(dataset.contacts) WHEN 1 THEN dataset.contacts[1].contactid ELSE ''
-END
-as contactid,
-				 dataset.last_update_time
-		 from(
-				 dataset inner join (
-						 select max(last_update_time) as max_update_time, i_dataset.agent_username
-						 from dataset i_dataset
-						 group by 2
-				 ) i_dataset on ((i_dataset.max_update_time = dataset.last_update_time) and (i_dataset.agent_username = dataset.agent_username))
-		 )
-		 where dataset.current_status<>'Offline'
-		 order by 1
+WITH dataset AS
+  (SELECT from_iso8601_timestamp(eventtimestamp) AS last_update_time,
+    currentagentsnapshot.configuration.username AS agent_username,
+    currentagentsnapshot.agentstatus.name AS current_status,
+    eventtype,
+    currentagentsnapshot.contacts AS contacts
+  FROM amazonconnectdataanalyticsdb.connect_ae
+  WHERE eventtype <> 'HEART_BEAT'
+    AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+    AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+    AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER))
+SELECT dataset.agent_username,
+  dataset.current_status,
+  cardinality(dataset.contacts) AS num_of_contacts,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].state
+    ELSE ''
+    END AS contact_state,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].queue.name
+    ELSE ''
+    END AS contact_queue,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN
+     (SELECT CAST(json_extract(message, '$.parameters.value') AS VARCHAR) AS call_reason
+      FROM amazonconnectdataanalyticsdb.connect_cfl
+      WHERE CAST(json_extract(message, '$.contactflowmoduletype') AS VARCHAR) = 'SetAttributes'
+        AND CAST(json_extract(message, '$.parameters.key') AS VARCHAR) = 'CallReason'
+        AND YEAR = CAST(substr(to_iso8601(CURRENT_DATE), 1, 4) AS INTEGER)
+        AND MONTH = CAST(substr(to_iso8601(CURRENT_DATE), 6, 2) AS INTEGER)
+        AND DAY = CAST(substr(to_iso8601(CURRENT_DATE), 9, 2) AS INTEGER)
+     LIMIT 1)
+     ELSE ''
+END AS call_reason,
+  CASE cardinality(dataset.contacts)
+    WHEN 1 THEN dataset.contacts[1].contactid
+    ELSE ''
+END AS contactid,
+    dataset.last_update_time
+FROM(dataset
+  INNER JOIN
+    (SELECT max(last_update_time) AS max_update_time,
+      i_dataset.agent_username
+    FROM dataset i_dataset
+    GROUP BY 2) i_dataset ON ((i_dataset.max_update_time = dataset.last_update_time)
+      AND (i_dataset.agent_username = dataset.agent_username)))
+WHERE dataset.current_status<>'Offline'
+ORDER BY 1
 ```
 
 1. Select **Directly query your data**  
