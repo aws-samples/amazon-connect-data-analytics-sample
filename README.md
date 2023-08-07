@@ -513,14 +513,14 @@ Amazon Connect Data Analytics Sample solution can be deployed by using AWS CDK C
 		- `cfl-stack-enabled`: Set to `true` to deploy Contact Flow Logs (CFL) Stack
 		- `cfl-partitioning-schedule-enabled`: Set to `true` if you want to schedule CFL Partitioning Job in EventBridge
 		- `connect-contact-flow-logs-cloudwatch-log-group`: Set Amazon CloudWatch log group where Amazon Connect Contact
-			Flow Logs are stored (i.e. `/aws/connect/your-instance-alias`)
+			Flow Logs are stored (e.g. `/aws/connect/your-instance-alias`)
 		- `cl-stack-enabled`: Set to `true` to deploy Contact Lens (CL) Stack
 		- `connect-contact-lens-s3-bucket-name`: The S3 bucket where Amazon Connect stores Contact Lens output files (and
-			Amazon Connect Call Recordings)
+			Amazon Connect Call Recordings) (e.g. `amazon-connect-xxxxxxxxxxxx`)
 		- `cl-partitioning-schedule-enabled`: Set to `true` if you want to schedule CL Partitioning Job in EventBridge
 		- `ef-stack-enabled`: Set to `true` to deploy Evaluation Forms (EF) Stack
 		- `connect-evaluation-forms-s3-bucket-path`: The S3 bucket/prefix where Amazon Connect stores Evaluation Forms
-			output files (i.e. your-bucket-name/connect/your-instance-alias/ContactEvaluations)
+			output files (e.g. your-bucket-name/connect/your-instance-alias/ContactEvaluations)
 		- `ef-partitioning-schedule-enabled`: Set to `true` if you want to schedule EF Partitioning Job in EventBridge
 		- `ef-reporting-stack-enabled`: Set to `true` to deploy Evaluation Forms Reporting Stack
 	- The script stores the deployment parameters to AWS System Manager Parameter Store
