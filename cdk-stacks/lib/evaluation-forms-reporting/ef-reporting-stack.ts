@@ -64,7 +64,7 @@ export class EFReportingStack extends NestedStack {
               recording.status                     recording_status,
               recording.location                   recording_location,
               recording.deletionreason             recording_deletionreason, year, month, day
-       FROM "amazonconnectdataanalyticsdb"."connect_ctr"`;
+       FROM ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr"`;
 
     const connectCtrDenormalizedQueryJson = JSON.stringify({"originalSql": connectCtrDenormalizedQuery});
 
@@ -306,7 +306,7 @@ export class EFReportingStack extends NestedStack {
               evaluationquestionanswers_MAIN.questionanswervalue,
               evaluationquestionanswers_MAIN.questionanswervaluerefid,
               evaluationquestionanswers_MAIN.questionanswerscorepercentage
-       FROM ("amazonconnectdataanalyticsdb"."connect_ef" CROSS JOIN UNNEST(evaluationquestionanswers) t (evaluationquestionanswers_MAIN))`;
+       FROM (${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef" CROSS JOIN UNNEST(evaluationquestionanswers) t (evaluationquestionanswers_MAIN))`;
 
     const connectEfEvaluationQuestionAnswersQueryJson = JSON.stringify({"originalSql": connectEfEvaluationQuestionAnswersQuery});
 
@@ -424,9 +424,9 @@ export class EFReportingStack extends NestedStack {
                        connect_ef_evaluationquestionanswers_view.questionanswervalue,
                        connect_ef_evaluationquestionanswers_view.questionanswervaluerefid,
                        connect_ef_evaluationquestionanswers_view.questionanswerscorepercentage
-       FROM ("amazonconnectdataanalyticsdb"."connect_ef_evaluationquestionanswers_view" RIGHT JOIN "amazonconnectdataanalyticsdb"."connect_ef_evaluationsectionsscores_view" ON (
-           "amazonconnectdataanalyticsdb"."connect_ef_evaluationquestionanswers_view"."evaluationId" =
-           "amazonconnectdataanalyticsdb"."connect_ef_evaluationsectionsscores_view"."evaluationId"))
+       FROM (${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationquestionanswers_view" RIGHT JOIN ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationsectionsscores_view" ON (
+           ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationquestionanswers_view"."evaluationId" =
+           ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationsectionsscores_view"."evaluationId"))
        ORDER BY "connect_ef_evaluationquestionanswers_view"."evaluationId" ASC,
                 "connect_ef_evaluationquestionanswers_view"."evaluationdefinitiontitle" ASC,
                 "connect_ef_evaluationquestionanswers_view"."sectionrefid" ASC`;
@@ -543,7 +543,7 @@ export class EFReportingStack extends NestedStack {
               evaluationsectionsscores_MAIN.sectionrefid,
               evaluationsectionsscores_MAIN.sectiontitle,
               evaluationsectionsscores_MAIN.sectionscorepercentage
-       FROM ("amazonconnectdataanalyticsdb"."connect_ef" CROSS JOIN UNNEST(evaluationsectionsscores) t (evaluationsectionsscores_MAIN))`;
+       FROM (${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef" CROSS JOIN UNNEST(evaluationsectionsscores) t (evaluationsectionsscores_MAIN))`;
 
     const connectEfEvaluationSectionsScoresQueryJson = JSON.stringify({"originalSql": connectEfEvaluationSectionsScoresQuery});
 
@@ -644,9 +644,9 @@ export class EFReportingStack extends NestedStack {
                        connect_ef_evaluationsectionsscores_view.sectionrefid           SCORE_sectionrefid,
                        connect_ef_evaluationsectionsscores_view.sectiontitle           SCORE_sectiontitle,
                        connect_ef_evaluationsectionsscores_view.sectionscorepercentage SCORE_sectionscorepercentage
-       FROM ("amazonconnectdataanalyticsdb"."connect_ef_evaluationquestionanswers_view" INNER JOIN "amazonconnectdataanalyticsdb"."connect_ef_evaluationsectionsscores_view" ON (
-           "amazonconnectdataanalyticsdb"."connect_ef_evaluationquestionanswers_view"."evaluationId" =
-           "amazonconnectdataanalyticsdb"."connect_ef_evaluationsectionsscores_view"."evaluationId"))
+       FROM (${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationquestionanswers_view" INNER JOIN ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationsectionsscores_view" ON (
+           ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationquestionanswers_view"."evaluationId" =
+           ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ef_evaluationsectionsscores_view"."evaluationId"))
        ORDER BY "connect_ef_evaluationquestionanswers_view"."evaluationId" ASC,
                 "connect_ef_evaluationquestionanswers_view"."evaluationdefinitiontitle" ASC,
                 "connect_ef_evaluationquestionanswers_view"."sectionrefid" ASC`;
@@ -762,35 +762,35 @@ export class EFReportingStack extends NestedStack {
 
     //final_connect_evaluation_ctr_view
     const finalConnectEvaluationCtrQuery =
-      `SELECT DISTINCT "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."evaluationId",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."contactid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."instanceid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."agentid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."evaluationdefinitiontitle",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."evaluator",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."evaluationsubmittimestamp",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."evaluationformtotalscorepercentage",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."questionrefid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."sectionrefid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."sectiontitle",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."parentsectionrefid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."questiontext",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."questionanswervalue",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."questionanswervaluerefid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."questionanswerscorepercentage",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."score_sectionrefid",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."score_sectiontitle",
-                       "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."score_sectionscorepercentage",
-                       "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."agent_username",
-                       "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."channel",
-                       "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."queue_name",
-                       "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."agent_routingprofile_name",
-                       "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."connectedtosystemtimestamp",
-                       "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."disconnecttimestamp",
-                       "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."initiationtimestamp"
-       FROM ("amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view" LEFT JOIN "amazonconnectdataanalyticsdb"."connect_ctr_denormalized" ON (
-           "amazonconnectdataanalyticsdb"."final_connect_ef_evaluationsall_view"."contactid" =
-           "amazonconnectdataanalyticsdb"."connect_ctr_denormalized"."contactid"))`;
+      `SELECT DISTINCT ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."evaluationId",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."contactid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."instanceid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."agentid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."evaluationdefinitiontitle",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."evaluator",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."evaluationsubmittimestamp",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."evaluationformtotalscorepercentage",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."questionrefid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."sectionrefid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."sectiontitle",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."parentsectionrefid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."questiontext",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."questionanswervalue",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."questionanswervaluerefid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."questionanswerscorepercentage",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."score_sectionrefid",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."score_sectiontitle",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."score_sectionscorepercentage",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."agent_username",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."channel",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."queue_name",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."agent_routingprofile_name",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."connectedtosystemtimestamp",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."disconnecttimestamp",
+                       ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."initiationtimestamp"
+       FROM (${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view" LEFT JOIN ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized" ON (
+           ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."final_connect_ef_evaluationsall_view"."contactid" =
+           ${props.SSMParams.awsGlueDatabaseName.toLowerCase()}."connect_ctr_denormalized"."contactid"))`;
 
     const finalConnectEvaluationCtrQueryJson = JSON.stringify({"originalSql": finalConnectEvaluationCtrQuery});
 
